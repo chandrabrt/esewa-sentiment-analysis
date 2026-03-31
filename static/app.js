@@ -141,12 +141,11 @@ class ReviewTable {
 
   async _fetch() {
     if (!this.container) return;
-    const params = new URLSearchParams({
-      page: this.page,
-      page_size: this.page_size,
-      ...this.filters,
-    });
-    Object.keys(params).forEach(k => params.get(k) === "" && params.delete(k));
+    const params = new URLSearchParams({ page: this.page, page_size: this.page_size });
+    // Only append non-empty filters
+    for (const [k, v] of Object.entries(this.filters)) {
+      if (v !== null && v !== undefined && v !== "") params.append(k, v);
+    }
 
     this.container.innerHTML = `<div class="empty-state"><div class="skeleton" style="height:200px"></div></div>`;
     try {
