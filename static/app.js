@@ -176,6 +176,7 @@ class ReviewTable {
         <td>${r.app_version || "—"}</td>
         <td>${formatDate(r.review_date)}</td>
         <td>${sentimentTag(r.sentiment)}</td>
+        <td><button class="btn-view" onclick='openReviewModal(${JSON.stringify(r)})'>View</button></td>
       </tr>`).join("");
 
     const totalPages = Math.ceil(total / this.page_size);
@@ -188,7 +189,7 @@ class ReviewTable {
       <div class="reviews-table-wrapper">
         <table class="reviews-table">
           <thead><tr>
-            <th>User</th><th>Rating</th><th>Review</th><th>Version</th><th>Date</th><th>Sentiment</th>
+            <th>User</th><th>Rating</th><th>Review</th><th>Version</th><th>Date</th><th>Sentiment</th><th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -257,4 +258,78 @@ async function triggerScrape(platform) {
   } catch(e) {
     showToast("Scrape failed. Please retry.", "error");
   }
+}
+
+// ── Review Details Modal ──────────────────────────────────
+function openReviewModal(r) {
+  // Remove existing modal if any
+  const existing = document.getElementById("review-modal-overlay");
+  if (existing) existing.remove();
+
+  const scoreBar = r.sentiment_score != null
+    ? `<div class="rdm-score-bar-track"><div class="rdm-score-bar-fill" style="width:${Math.round(r.sentiment_score * 100)}%"></div></div><span class="rdm-score-label">${(r.sentiment_score * 100).toFixed(1)}% confidence</span>`
+    : `<span class="rdm-score-label">N/A</span>`;
+
+  const thumbsHtml = r.thumbs_up != null
+    ? `<span class="rdm-meta-val">👍 ${r.thumbs_up.toLocaleString()} helpful votes</span>`
+    : `<span class="rdm-meta-val">—</span>`;
+
+  const overlay = document.createElement("div");
+  overlay.id = "review-modal-overlay";
+  overlay.className = "rdm-overlay";
+  overlay.innerHTML = `
+    <div class="rdm-panel" role="dialog" aria-modal="true" aria-label="Review Details">
+      <div class="rdm-header">
+        <div class="rdm-user-block">
+          <div class="rdm-avatar" style="background:${avatarColor(r.user_name)}">${avatarLetter(r.user_name)}</div>
+          <div>
+            <div class="rdm-username">${escHtml(r.user_name)}</div>
+            <div class="rdm-date">${formatDate(r.review_date)}</div>
+          </div>
+        </div>
+        <div class="rdm-header-right">
+          ${sentimentTag(r.sentiment)}
+          ${platformBadge(r.platform)}
+          <button class="rdm-close" onclick="document.getElementById('review-modal-overlay').remove()" aria-label="Close">✕</button>
+        </div>
+      </div>
+
+      <div class="rdm-stars"><div class="stars rdm-big-stars">${starsHTML(r.rating)}</div><span class="rdm-rating-num">${r.rating} / 5</span></div>
+
+      <div class="rdm-section-label">Review</div>
+      <div class="rdm-review-body">${escHtml(r.text)}</div>
+
+      <div class="rdm-meta-grid">
+        <div class="rdm-meta-item">
+          <span class="rdm-meta-key">App Version</span>
+          <span class="rdm-meta-val">${r.app_version || "—"}</span>
+        </div>
+        <div class="rdm-meta-item">
+          <span class="rdm-meta-key">Helpful Votes</span>
+          ${thumbsHtml}
+        </div>
+        <div class="rdm-meta-item">
+          <span class="rdm-meta-key">Platform</span>
+          <span class="rdm-meta-val">${r.platform === "playstore" ? "🤖 Google Play" : "🍎 App Store"}</span>
+        </div>
+        <div class="rdm-meta-item">
+          <span class="rdm-meta-key">Review ID</span>
+          <span class="rdm-meta-val rdm-mono">${escHtml(r.review_id || "—")}</span>
+        </div>
+      </div>
+
+      <div class="rdm-section-label">Sentiment Confidence</div>
+      <div class="rdm-score-row">${scoreBar}</div>
+    </div>
+  `;
+
+  // Close on backdrop click
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+  // Close on Escape
+  const onKey = (e) => { if (e.key === "Escape") { overlay.remove(); document.removeEventListener("keydown", onKey); } };
+  document.addEventListener("keydown", onKey);
+
+  document.body.appendChild(overlay);
+  // Trigger animation
+  requestAnimationFrame(() => overlay.classList.add("rdm-visible"));
 }
