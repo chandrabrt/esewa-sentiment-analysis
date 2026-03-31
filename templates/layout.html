@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>eSewa Sentiment — {% block title %}Dashboard{% endblock %}</title>
+  <meta name="description" content="eSewa App Sentiment Analysis Dashboard — Real-time review insights from Google Play Store and Apple App Store." />
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ──────── Sidebar ──────── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">e</div>
+    <div>
+      <span>eSewa Insights<small>Sentiment Analysis</small></span>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Overview</div>
+    <a href="/"         class="nav-item {% if active == 'dashboard' %}active{% endif %}"><span class="nav-icon">📊</span> Dashboard</a>
+
+    <div class="nav-label">Reviews</div>
+    <a href="/playstore" class="nav-item {% if active == 'playstore' %}active{% endif %}"><span class="nav-icon">🤖</span> Play Store</a>
+    <a href="/appstore"  class="nav-item {% if active == 'appstore'  %}active{% endif %}"><span class="nav-icon">🍎</span> App Store</a>
+
+    <div class="nav-label">Config</div>
+    <a href="/settings"  class="nav-item {% if active == 'settings'  %}active{% endif %}"><span class="nav-icon">⚙️</span> Settings</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="nav-item" style="cursor:default;opacity:0.6;font-size:0.72rem;">v1.0.0 · SQLite DB</div>
+  </div>
+</aside>
+
+<!-- ──────── Main ──────── -->
+<div class="main-content">
+
+  <!-- Header -->
+  <header class="header">
+    <span class="header-title">{% block header_title %}eSewa Sentiment Analysis{% endblock %}</span>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="global-search" placeholder="Search reviews…" />
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" id="header-scrape-btn" onclick="triggerBothScrape()">⬇ Scrape Now</button>
+      <div class="avatar" title="Admin">A</div>
+    </div>
+  </header>
+
+  <!-- Page -->
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/app.js"></script>
+<script>
+  async function triggerBothScrape() {
+    document.getElementById("header-scrape-btn").textContent = "Scraping…";
+    await Promise.all([triggerScrape("playstore"), triggerScrape("appstore")]);
+    document.getElementById("header-scrape-btn").textContent = "⬇ Scrape Now";
+    location.reload();
+  }
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

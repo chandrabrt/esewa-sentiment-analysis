@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block header_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Sentiment Dashboard</h1>
+  <p>Real-time insights from Google Play Store &amp; Apple App Store reviews.</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="card-icon green">📝</div>
+    <div class="card-label">Total Reviews</div>
+    <div class="card-value" id="stat-total">—</div>
+    <div class="card-sub">All platforms combined</div>
+  </div>
+  <div class="stat-card">
+    <div class="card-icon blue">⭐</div>
+    <div class="card-label">Average Rating</div>
+    <div class="card-value" id="stat-avg-rating">—</div>
+    <div class="card-sub">Across all reviews</div>
+  </div>
+  <div class="stat-card">
+    <div class="card-icon green">😊</div>
+    <div class="card-label">Positive Sentiment</div>
+    <div class="card-value" id="stat-positive">—</div>
+    <div class="card-sub">Of all analyzed reviews</div>
+  </div>
+  <div class="stat-card">
+    <div class="card-icon orange">😠</div>
+    <div class="card-label">Negative Sentiment</div>
+    <div class="card-value" id="stat-negative">—</div>
+    <div class="card-sub">Reviews needing attention</div>
+  </div>
+</div>
+
+<!-- Charts + Live Feed -->
+<div class="content-grid">
+  <!-- Trend Line Chart -->
+  <div class="card">
+    <div class="card-title">Sentiment Trends Over Time</div>
+    <div class="card-subtitle">Monthly breakdown of positive, neutral, and negative reviews</div>
+    <div class="chart-wrapper">
+      <canvas id="trend-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Live Feed -->
+  <div class="card">
+    <div class="card-title">Live Review Feed</div>
+    <div class="live-indicator">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
+    <div class="live-feed" id="live-feed">
+      <div class="empty-state" style="padding:24px 0">
+        <div class="icon">📡</div>
+        <p>Connecting to live feed…</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Platform Breakdown -->
+<div class="content-grid">
+  <!-- Donut Chart -->
+  <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <div class="card-title" style="text-align:center">Overall Sentiment Distribution</div>
+    <div class="card-subtitle" style="text-align:center">All platforms</div>
+    <div class="donut-wrap">
+      <div class="donut-chart-wrapper">
+        <canvas id="donut-chart"></canvas>
+        <div class="donut-center">
+          <div class="big" id="donut-label">—</div>
+          <div class="small">positive</div>
+        </div>
+      </div>
+      <div class="legend" id="donut-legend"></div>
+    </div>
+  </div>
+
+  <!-- Platform Comparison -->
+  <div class="card">
+    <div class="card-title">Platform Breakdown</div>
+    <div class="card-subtitle">Sentiment per platform</div>
+    <div id="platform-breakdown">
+      <div class="skeleton" style="height:120px;border-radius:12px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Reviews Table -->
+<div class="card table-section">
+  <div class="card-title">Recent Reviews</div>
+  <div class="card-subtitle">Latest scraped reviews from all platforms</div>
+  <div id="recent-table-container">
+    <div class="empty-state">
+      <div class="icon">📋</div>
+      <h3>No reviews yet</h3>
+      <p>Click "Scrape Now" in the header to fetch the latest reviews.</p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  // Load stats
+  const stats = await loadSummary({
+    totalReviews: document.getElementById("stat-total"),
+    avgRating:    document.getElementById("stat-avg-rating"),
+    positivePct:  document.getElementById("stat-positive"),
+    negativePct:  document.getElementById("stat-negative"),
+  });
+
+  // Trend chart
+  await buildTrendChart("trend-chart");
+
+  // Donut chart
+  if (stats) {
+    const s = stats.sentiment_overall;
+    const pct = [s.positive_pct, s.neutral_pct, s.negative_pct];
+    const colors = ["#60b527","#94a3b8","#f95630"];
+    buildDonutChart("donut-chart", pct, ["Positive","Neutral","Negative"], colors);
+    document.getElementById("donut-label").textContent = `${s.positive_pct}%`;
+    document.getElementById("donut-legend").innerHTML = [
+      { label: "Positive", val: s.positive, pct: s.positive_pct, color: "#60b527" },
+      { label: "Neutral",  val: s.neutral,  pct: s.neutral_pct,  color: "#94a3b8" },
+      { label: "Negative", val: s.negative, pct: s.negative_pct, color: "#f95630" },
+    ].map(l => `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${l.color}"></div>
+        <span class="legend-label">${l.label}</span>
+        <span class="legend-value">${l.val.toLocaleString()} (${l.pct}%)</span>
+      </div>`).join("");
+
+    // Platform breakdown
+    const ps = stats.sentiment_playstore;
+    const as = stats.sentiment_appstore;
+    document.getElementById("platform-breakdown").innerHTML = `
+      <div style="margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-weight:600;font-size:.82rem">🤖 Google Play Store</span>
+          <span style="font-size:.78rem;color:var(--on-surface-variant)">${stats.total_playstore.toLocaleString()} reviews</span>
+        </div>
+        <div style="display:flex;gap:8px;font-size:.72rem;margin-bottom:6px">
+          <span>😊 ${ps.positive_pct}%</span>
+          <span>➖ ${ps.neutral_pct}%</span>
+          <span>😠 ${ps.negative_pct}%</span>
+          <span style="margin-left:auto">⭐ ${stats.avg_rating_playstore.toFixed(1)}</span>
+        </div>
+        <div class="progress-bar-track"><div class="progress-bar-fill fill-positive" style="width:${ps.positive_pct}%"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-weight:600;font-size:.82rem">🍎 Apple App Store</span>
+          <span style="font-size:.78rem;color:var(--on-surface-variant)">${stats.total_appstore.toLocaleString()} reviews</span>
+        </div>
+        <div style="display:flex;gap:8px;font-size:.72rem;margin-bottom:6px">
+          <span>😊 ${as.positive_pct}%</span>
+          <span>➖ ${as.neutral_pct}%</span>
+          <span>😠 ${as.negative_pct}%</span>
+          <span style="margin-left:auto">⭐ ${stats.avg_rating_appstore.toFixed(1)}</span>
+        </div>
+        <div class="progress-bar-track"><div class="progress-bar-fill fill-positive" style="width:${as.positive_pct}%"></div></div>
+      </div>`;
+  }
+
+  // Recent reviews table (using playstore+appstore combined last 20)
+  const recTable = new ReviewTable({ containerId: "recent-table-container", platform: "playstore", page_size: 10 });
+  await recTable.load({});
+  window._tbl_playstore = recTable;
+
+  // Start live feed via WebSocket
+  initLiveFeed("live-feed");
+});
+</script>
+{% endblock %}

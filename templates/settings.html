@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+{% block title %}Settings{% endblock %}
+{% block header_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>⚙️ Settings</h1>
+  <p>Configure scraping targets, sentiment thresholds, and schedule.</p>
+</div>
+
+<div class="settings-grid">
+  <!-- Scraping Settings -->
+  <div class="card">
+    <div class="card-title">Scraping Configuration</div>
+    <div class="card-subtitle">Configure app identifiers and review count</div>
+
+    <div class="form-group">
+      <label class="form-label">Play Store Package ID</label>
+      <input class="form-input" id="pkg-id" value="com.f1soft.esewa" readonly />
+      <div class="form-hint">Google Play Store package identifier for eSewa</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">App Store App ID</label>
+      <input class="form-input" id="app-id" value="969682311" readonly />
+      <div class="form-hint">Apple App Store numeric ID for eSewa</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Reviews per Scrape</label>
+      <input class="form-input" id="scrape-count" type="number" value="100" min="10" max="500" />
+      <div class="form-hint">How many reviews to fetch per scrape (max 500)</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Country Code</label>
+      <input class="form-input" id="country-code" value="np" />
+      <div class="form-hint">ISO country code for regional reviews (e.g., np, us, in)</div>
+    </div>
+  </div>
+
+  <!-- Sentiment Settings -->
+  <div class="card">
+    <div class="card-title">Sentiment Engine</div>
+    <div class="card-subtitle">VADER threshold configuration</div>
+
+    <div class="form-group">
+      <label class="form-label">Positive Threshold</label>
+      <input class="form-input" type="number" step="0.01" value="0.05" />
+      <div class="form-hint">Compound score ≥ this → Positive (default: 0.05)</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Negative Threshold</label>
+      <input class="form-input" type="number" step="0.01" value="-0.05" />
+      <div class="form-hint">Compound score ≤ this → Negative (default: -0.05)</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Sentiment Engine</label>
+      <select class="form-input">
+        <option selected>VADER (Valence Aware Dictionary — default)</option>
+        <option>TextBlob (rule-based, lightweight)</option>
+      </select>
+      <div class="form-hint">VADER is optimized for social media / short texts</div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card">
+    <div class="card-title">Quick Actions</div>
+    <div class="card-subtitle">Manual triggers for scraping and database</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+      <button class="btn btn-primary" style="justify-content:center" onclick="triggerScrape('playstore').then(()=>showToast('Play Store scraped!'))">
+        🤖 Scrape Play Store Now
+      </button>
+      <button class="btn btn-primary" style="justify-content:center" onclick="triggerScrape('appstore').then(()=>showToast('App Store scraped!'))">
+        🍎 Scrape App Store Now
+      </button>
+      <button class="btn btn-ghost" style="justify-content:center" onclick="showToast('DB cleared! (feature coming soon)', 'error')">
+        🗑 Clear Database
+      </button>
+    </div>
+  </div>
+
+  <!-- Database Info -->
+  <div class="card">
+    <div class="card-title">Database Info</div>
+    <div class="card-subtitle">SQLite local storage</div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;font-size:.82rem">
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--on-surface-variant)">Engine</span>
+        <span style="font-weight:600">SQLite 3</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--on-surface-variant)">File</span>
+        <span style="font-weight:600">esewa_reviews.db</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--on-surface-variant)">ORM</span>
+        <span style="font-weight:600">SQLAlchemy 2.0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--on-surface-variant)">Total Reviews</span>
+        <span class="card-value" id="settings-total" style="font-size:1rem">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const stats = await loadSummary({});
+  if (stats) {
+    document.getElementById("settings-total").textContent = stats.total_reviews.toLocaleString();
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "layout.html" %}
+{% block title %}Play Store Reviews{% endblock %}
+{% block header_title %}Google Play Store Reviews{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🤖 Google Play Store Reviews</h1>
+  <p>Scraped and analyzed reviews from <code>com.f1soft.esewa</code>.</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="card-icon green">📝</div>
+    <div class="card-label">Total Reviews</div>
+    <div class="card-value" id="ps-total">—</div>
+    <div class="card-sub">In database</div>
+  </div>
+  <div class="stat-card">
+    <div class="card-icon blue">⭐</div>
+    <div class="card-label">Average Rating</div>
+    <div class="card-value" id="ps-avg">—</div>
+    <div class="card-sub">Play Store users</div>
+  </div>
+  <div class="stat-card">
+    <div class="card-icon green">😊</div>
+    <div class="card-label">Positive</div>
+    <div class="card-value" id="ps-pos">—</div>
+    <div class="card-sub">Of Play Store reviews</div>
+  </div>
+  <div class="stat-card">
+    <div class="card-icon orange">😠</div>
+    <div class="card-label">Negative</div>
+    <div class="card-value" id="ps-neg">—</div>
+    <div class="card-sub">Of Play Store reviews</div>
+  </div>
+</div>
+
+<!-- Scrape + Table -->
+<div class="card table-section">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div class="card-title">Review Browser</div>
+      <div class="card-subtitle">Filter and search Play Store reviews</div>
+    </div>
+    <button class="btn btn-primary" onclick="scrapeAndReload()">⬇ Scrape New Reviews</button>
+  </div>
+
+  <div class="table-toolbar">
+    <div class="search-bar" style="width:240px">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="ps-search" placeholder="Search reviews…" />
+    </div>
+    <select class="filter-select" id="ps-rating">
+      <option value="">All Ratings</option>
+      <option value="5">⭐⭐⭐⭐⭐ 5 stars</option>
+      <option value="4">⭐⭐⭐⭐  4 stars</option>
+      <option value="3">⭐⭐⭐    3 stars</option>
+      <option value="2">⭐⭐      2 stars</option>
+      <option value="1">⭐       1 star</option>
+    </select>
+    <select class="filter-select" id="ps-sentiment">
+      <option value="">All Sentiments</option>
+      <option value="positive">😊 Positive</option>
+      <option value="neutral">➖ Neutral</option>
+      <option value="negative">😠 Negative</option>
+    </select>
+    <button class="btn btn-ghost" onclick="applyFilters()">Apply</button>
+    <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+  </div>
+
+  <div id="ps-table-container"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const psTable = new ReviewTable({ containerId: "ps-table-container", platform: "playstore", page_size: 20 });
+window._tbl_playstore = psTable;
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await psTable.load({});
+
+  const stats = await loadSummary({
+    totalReviews: document.getElementById("ps-total"),
+    avgRating:    document.getElementById("ps-avg"),
+    posPlaystore: document.getElementById("ps-pos"),
+  });
+  if (stats) document.getElementById("ps-neg").textContent = `${stats.sentiment_playstore.negative_pct}%`;
+});
+
+function applyFilters() {
+  const search = document.getElementById("ps-search").value;
+  const rating = document.getElementById("ps-rating").value;
+  const sentiment = document.getElementById("ps-sentiment").value;
+  psTable.load({ search, rating, sentiment });
+}
+
+function clearFilters() {
+  document.getElementById("ps-search").value = "";
+  document.getElementById("ps-rating").value = "";
+  document.getElementById("ps-sentiment").value = "";
+  psTable.load({});
+}
+
+async function scrapeAndReload() {
+  await triggerScrape("playstore");
+  await psTable.load({});
+}
+</script>
+{% endblock %}
